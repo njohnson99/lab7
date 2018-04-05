@@ -57,7 +57,10 @@ that accepts a shape_adt and returns a float representing the area of
 the shape.
 ....................................................................*)
 let area_adt (s : shape_adt) : float =
-  failwith "area_adt not implemented" ;;
+  match s with
+  | Square (_, l) -> l *. l
+  | Rect (_, l, w) -> l *. w
+  | Circle(_, r) -> r *. r *. 3.14159 ;;
 
 (*....................................................................
 Exercise 1B: Write a function that, given a list of elements of type
@@ -65,7 +68,7 @@ shape_adt, returns a list of areas corresponding to every shape.
 ....................................................................*)
     
 let list_area_adt (lst : shape_adt list) : float list =
-  failwith "list_area_adt not implemented" ;;
+  List.map area_adt lst ;;
 
 
 (*====================================================================
@@ -191,23 +194,26 @@ object (this)
   val mutable height = h
 
   method area : float =
-    failwith "rect area method not implemented"
+    width *. width
 
   method bounding_box : point * point =
-    failwith "rect bounding_box method not implemented"
+    let (x , y) = pos in
+    (pos, (x +. width, y +. height))
 
   method center : point =
-    failwith "rect center method not implemented"
+    let (x, y) = pos in (x +. width /. 2. , y +. height /. 2.)
 
   (* Destructively update pos to translate the shape by the values
      given in t. *)
-  method translate (t : point) : unit =
-    failwith "rect translate method not implemented"
+  method translate ((t1, t2) : point) : unit =
+    let (x, y) = pos in
+    pos <- (x +. t1, y +. t2)
 
   (* Scale the width and height of a rectangle from the lower-
      left corner. *)
   method scale (k : float) : unit =
-    failwith "rect scale method not implemented"
+    width <- width *. k;
+    height <- height *. k;
 
 end ;;
 
@@ -276,7 +282,7 @@ Exercise 2D: Create a function called area that accepts a shape object
 and returns a float of the area for that shape.
 ....................................................................*)
 let area (s : shape) : float =
-  failwith "area not implemented" ;;
+  s#area ;;
 
 (*....................................................................
 Exercise 2E: Create a list of instantiated shapes called s_list.
@@ -286,7 +292,7 @@ The list should contain, in order:
 3. a square at (-3, -2.5) with size 4.3
 ....................................................................*)
    
-let s_list = [] ;;
+let s_list = [new rect (1.,1.) 4. 5.] ;;
 
 (* As you might recall, lists can only contain objects of the same
 type.  Why does the type system not show an error with your answer to
@@ -336,9 +342,12 @@ Exercise 3A: Implement the square_rect class which inherits all of its
 methods from its parent.
 ......................................................................*)
 
-(* UNCOMMENT ME AND COMPLETE
-class square_rect (p : point) (s : float) : shape = ...
- *)
+
+class square_rect (p : point) (s : float) : shape = 
+  object
+    inherit rect p s s
+  end ;;
+
 
 (*......................................................................
 Exercise 3B: Now, implement a square_center_scale class that inherits
@@ -348,9 +357,18 @@ place. Hint: First scale, then translate the center to its original
 position.
 ......................................................................*)
 
-(* UNCOMMENT ME AND COMPLETE
-class square_center_scale (p: point) (s: float) : shape = ...
- *)
+class square_center_scale (p: point) (s: float) : shape = 
+  object
+    inherit square_rect p s as super
+
+    method! scale (k : float) : unit =
+      let (oldx, oldy) = super#center in 
+      super#scale k;
+      let (newx, newy) = super#center in
+      super#translate (oldx -. newx,  oldy -. newy)
+  end ;;
+
+
      
 (* Before we move on, consider: do you need to make any modifications
 to the area function you wrote in Exercise 2D to support these new
@@ -417,11 +435,16 @@ that implements a quad class type. Hint: By taking advantage of
 existing classes, you should only need to implement a single method.
 ......................................................................*)
   
-(* UNCOMMENT ME
+
 class rect_quad (p : point) (w : float) (h : float) : quad =
   object
+    inherit rect p w h as super
+
+    method sides =
+      let ((x1, y1), (x2, y2)) = super#bounding_box in
+      (x2 -. x1, y2 -.y1, x2 -. x1, y2 -. y1)
+
   end ;;
- *)
 
 (*......................................................................
 Exercise 4B: Complete a class, square_quad, that represents a square
